@@ -1,0 +1,4 @@
+# Local environment next to the compose file. Never commit.
+.env
+.env.*
+!example.env

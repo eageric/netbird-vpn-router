@@ -1,0 +1,56 @@
+# NetBird client used as the routing peer for IT traffic into the EAG
+# internal network. IT peers send that traffic across the overlay; it
+# leaves here onto networks this host can already route to.
+#
+# This file enrolls the peer. It does not publish routes. After the peer
+# is connected, open the NetBird dashboard and add this peer to a Network
+# whose resources are the EAG internal ranges. Leave masquerade on unless
+# those networks route 100.64.0.0/10 back to this host.
+# Do not publish 0.0.0.0/0 on this peer. That would make it an internet
+# exit node and would also expose every network this host can reach.
+#
+# Host networking is required. Forwarded packets have to leave on the
+# host's own interfaces, and the client installs its firewall rules in
+# the host network namespace. The client turns on IP forwarding itself.
+#
+# Copy example.env to .env and fill it in before "docker compose up".
+# Do not commit .env.
+#   NB_SETUP_KEY        setup key from the NetBird dashboard
+#   NB_MANAGEMENT_URL   self-hosted management URL, no path
+#   NB_HOSTNAME         peer name shown in the dashboard
+#   NB_LOG_LEVEL        client log level (default info)
+#
+# The volume keeps the peer identity. Removing it makes the next start
+# register a new peer, which then has to be added to the Network again.
+
+name: netbird-router
+
+services:
+  netbird:
+    image: netbirdio/netbird:latest
+    container_name: ${NB_HOSTNAME}
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_RESOURCE
+    devices:
+      - /dev/net/tun
+    environment:
+      NB_SETUP_KEY: ${NB_SETUP_KEY:?Set NB_SETUP_KEY}
+      NB_MANAGEMENT_URL: ${NB_MANAGEMENT_URL:?Set NB_MANAGEMENT_URL}
+      NB_HOSTNAME: ${NB_HOSTNAME:?Set NB_HOSTNAME}
+      NB_LOG_LEVEL: ${NB_LOG_LEVEL:-info}
+    volumes:
+      - netbird_client:/var/lib/netbird
+    healthcheck:
+      test: ["CMD", "netbird", "status", "--check", "ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  netbird_client:
+    name: netbird-router
