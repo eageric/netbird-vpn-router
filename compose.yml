@@ -1,13 +1,12 @@
-# NetBird client used as the routing peer for IT traffic into the EAG
-# internal network. IT peers send that traffic across the overlay; it
-# leaves here onto networks this host can already route to.
+# NetBird client used to make this Linux host a routing peer for
+# internal resources (VPN-to-Site). Authorized peers send selected internal
+# traffic across the overlay, with source NAT (masquerading) on egress.
 #
 # This file enrolls the peer. It does not publish routes. After the peer
-# is connected, open the NetBird dashboard and add this peer to a Network
-# whose resources are the EAG internal ranges. Leave masquerade on unless
-# those networks route 100.64.0.0/10 back to this host.
-# Do not publish 0.0.0.0/0 on this peer. That would make it an internet
-# exit node and would also expose every network this host can reach.
+# is connected, create a Network in the NetBird dashboard, assign this
+# routing peer, add internal resources, and grant access through policies.
+# Leave masquerade enabled. Do not add an exit node or publish default
+# routes (0.0.0.0/0 or ::/0). See README.md for setup and verification.
 #
 # Host networking is required. Forwarded packets have to leave on the
 # host's own interfaces, and the client installs its firewall rules in
@@ -21,14 +20,14 @@
 #   NB_LOG_LEVEL        client log level (default info)
 #
 # The volume keeps the peer identity. Removing it makes the next start
-# register a new peer, which then has to be added to the Network again.
+# register a new peer, which then has to be assigned to the Network again.
 
-name: netbird-router
+name: netbird-${NB_HOSTNAME}
 
 services:
   netbird:
-    image: netbirdio/netbird:latest
-    container_name: ${NB_HOSTNAME}
+    image: netbirdio/netbird:0.83.0
+    container_name: netbird-${NB_HOSTNAME}
     restart: unless-stopped
     network_mode: host
     cap_add:
